@@ -6,3 +6,15 @@ open_clip/*
 dsconfig/*
 .vscode/*
 dsconfig/*
+
+*.pt
+**/*.npy
+**/*.png
+
+pcds/
+features/
+
+shapes/*
+eval
+train
+output
