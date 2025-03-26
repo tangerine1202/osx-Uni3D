@@ -1,7 +1,7 @@
 #!/bin/bash
 
-name=eval
-stl_dir="${name}/meshes/peg/"
+name=train-vqvae
+stl_dir="data/${name}/meshes/peg/"
 
 pcd_dir="pcds/${name}_pcd"
 

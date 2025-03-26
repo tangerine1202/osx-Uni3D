@@ -7,6 +7,7 @@ from easydict import EasyDict
 import torch
 import numpy as np
 from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 
@@ -86,8 +87,23 @@ def infer_uni3d_features(model, data):
     return features.detach().cpu()
 
 
-def plot_PCA(feat_dict, output_path=None, show=False, seed=42):
+def plot_viz(feat_dict, output_path=None, seed=42):
     def get_vertex_cnt(x): return int(x[4:].split('_')[0])
+
+    def make_plot(data, output_path):
+        # Visualize for point with different color
+        plt.figure(figsize=(10, 10))
+        for i, key in enumerate(keys):
+            v_cnt = get_vertex_cnt(key)
+            plt.scatter(data[i, 0], data[i, 1], c=f'C{v_cnt}', label=f'{v_cnt} vertices')
+        # Remove duplicate labels
+        handles, labels = plt.gca().get_legend_handles_labels()
+        unique_labels = dict(zip(labels, handles))
+        plt.legend(unique_labels.values(), unique_labels.keys())
+        # Save the plot
+        plt.savefig(output_path)
+        log.info(f'Plot saved to {output_path}')
+
     keys = list(feat_dict.keys())
     features = np.stack(list(feat_dict.values()), axis=0)
 
@@ -95,23 +111,12 @@ def plot_PCA(feat_dict, output_path=None, show=False, seed=42):
     data_pca = pca.fit_transform(features)
     data_pca = (data_pca - data_pca.min()) / (data_pca.max() - data_pca.min())
 
-    # Visualize for point with different color
-    plt.figure(figsize=(10, 10))
-    for i, key in enumerate(keys):
-        v_cnt = get_vertex_cnt(key)
-        plt.scatter(data_pca[i, 0], data_pca[i, 1], c=f'C{v_cnt}', label=f'{v_cnt} vertices')
+    tsne = TSNE(n_components=2, random_state=seed)
+    data_tsne = tsne.fit_transform(features)
+    data_tsne = (data_tsne - data_tsne.min()) / (data_tsne.max() - data_tsne.min())
 
-    # Remove duplicate labels
-    handles, labels = plt.gca().get_legend_handles_labels()
-    unique_labels = dict(zip(labels, handles))
-    plt.legend(unique_labels.values(), unique_labels.keys())
-
-    # Save the plot
-    plt.savefig(output_path)
-    log.info(f'PCA plot saved to {output_path}')
-
-    if show:
-        plt.show()
+    make_plot(data_pca, output_path=f'{output_path}_pca.png')
+    make_plot(data_tsne, output_path=f'{output_path}_tsne.png')
 
 
 def setup_environment(args):
@@ -194,14 +199,13 @@ def save_features_and_visualize(feat_dict, output, is_input_dir=False, seed=42):
     """Save features and create PCA visualization if needed"""
     saved_dir = Path('results')
     saved_dir.mkdir(parents=True, exist_ok=True)
+    saved_path = saved_dir / f'{output}'
 
-    np.save(saved_dir / f'{output}.npy', feat_dict)
+    np.save(f'{saved_path}.npy', feat_dict)
     log.info(f'Features saved to {saved_dir}')
 
     if is_input_dir:
-        pca_path = saved_dir / f'{output}_pca.png'
-        plot_PCA(feat_dict, pca_path, seed=seed)
-        log.info(f'PCA plot saved to {pca_path}')
+        plot_viz(feat_dict, saved_path, seed=seed)
 
 
 def main(args):
